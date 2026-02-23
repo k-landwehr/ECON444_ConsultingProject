@@ -1,0 +1,18 @@
+---
+title: "ECON 444 Consulting Project"
+author: "Kendall Landwehr & Tatum Barkat"
+format: html
+---
+
+```{r}
+#Reading in data 
+
+install.packages("readxl")
+
+library(readxl)
+consum_data <- read_excel("data/ConsumptionConsumerCategoryHour.xlsx")
+
+price_da_data <- read_excel("data/ActualDayAheadPrices.xlsx")
+
+```
+

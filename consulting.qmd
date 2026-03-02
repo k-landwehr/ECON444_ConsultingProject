@@ -50,9 +50,51 @@ library(dplyr)
 merged_data <- left_join(consumption_data,
                          price_data,
                          by = c("time", "Region"))
-#Deteling unnecessary hour columns
+#Deleting unnecessary hour columns
 
 merged_data <- merged_data %>%
   select(-Hour_DK.x, -Hour_DK.y)
+
+#Renaming time column and moving to left
+merged_data <- merged_data %>%
+  rename (Time = time)
+merged_data <- merged_data %>%
+  select(Time, everything())
+```
+
+```{r}
+# Fit the regression model
+model <- lm(Consumption_kWh ~ Spot_Price_DKK, data = merged_data)
+
+# View a summary of results
+summary(model)
+
+# Plot residuals vs fitted values
+plot(model, which = 1)
+```
+
+
+```{r}
+# Normal Q-Q plot to check residuals
+plot(model, which = 2)
+
+library(ggplot2)
+
+ggplot(merged_data, aes(x = Spot_Price_DKK, y = Consumption_kWh)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(x = "Spot Price (DKK)", y = "Consumption (kWh)",
+       title = "Consumption vs Spot Price")
+```
+
+```{r}
+#Checks
+sum(is.na(merged_data$Spot_Price_DKK))
+unique(consumption_data$region)
+unique(price_data$Region)
+summary(merged_data$Consumption_kWh)
+summary(merged_data$Spot_Price_DKK)
+
+
 ```
 

@@ -88,13 +88,143 @@ ggplot(merged_data, aes(x = Spot_Price_DKK, y = Consumption_kWh)) +
 ```
 
 ```{r}
-#Checks
+#Checking to see if there's other things that could be making the regression so awful
 sum(is.na(merged_data$Spot_Price_DKK))
 unique(consumption_data$region)
 unique(price_data$Region)
 summary(merged_data$Consumption_kWh)
 summary(merged_data$Spot_Price_DKK)
 
+```
+```{r}
+###ChatGPT Log-Transform Regression Attempt
+library(dplyr)
+library(ggplot2)
 
+# 1️⃣ Backup original dataset
+merged_data_backup <- merged_data  # keeps the original intact
+
+# 2️⃣ Inspect price distribution
+summary(merged_data$Spot_Price_DKK)
+
+# 3️⃣ Shift Spot_Price_DKK so all values are positive (preserves negative prices)
+min_price <- min(merged_data$Spot_Price_DKK)
+merged_data_clean <- merged_data %>%
+  mutate(
+    Spot_Price_DKK_adj = Spot_Price_DKK + abs(min_price) + 1  # shift to >0
+  )
+
+# 4️⃣ Log-transform consumption and adjusted price
+merged_data_clean <- merged_data_clean %>%
+  mutate(
+    log_Consumption = log(Consumption_kWh),
+    log_Price = log(Spot_Price_DKK_adj)
+  )
+
+# 5️⃣ Run log-log regression
+log_model <- lm(log_Consumption ~ log_Price, data = merged_data_clean)
+
+# 6️⃣ View regression summary
+summary(log_model)
+
+# 7️⃣ Add predicted log-consumption values
+merged_data_clean <- merged_data_clean %>%
+  mutate(predicted_log_Consumption = predict(log_model))
+
+# 8️⃣ Optional: plot log-log relationship
+ggplot(merged_data_clean, aes(x = log_Price, y = log_Consumption)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(
+    x = "Log Spot Price (DKK, shifted)",
+    y = "Log Consumption (kWh)",
+    title = "Log-Log Regression: Consumption vs Price"
+  )
+
+# 🔹 If you ever want to revert back to original data:
+# merged_data <- merged_data_backup
+
+##Shows slightly more of a relationship but still very small correlation...
+```
+```{r}
+#Adding Region and Sector as Factors to the Log-transformed regression model
+
+library(dplyr)
+library(ggplot2)
+
+# 1️⃣ Backup the original data (if not already done)
+merged_data_backup <- merged_data
+
+# 2️⃣ Shift Spot_Price_DKK to handle negative values
+min_price <- min(merged_data$Spot_Price_DKK)
+merged_data_clean <- merged_data %>%
+  mutate(
+    Spot_Price_DKK_adj = Spot_Price_DKK + abs(min_price) + 1,  # shift > 0
+    log_Consumption = log(Consumption_kWh),
+    log_Price = log(Spot_Price_DKK_adj),
+    Region = factor(Region),   # ensure categorical
+    Sector = factor(Sector)    # ensure categorical
+  )
+
+# 3️⃣ Run log-log regression with Region and Sector as factors
+log_model_factors <- lm(
+  log_Consumption ~ log_Price + Region + Sector,
+  data = merged_data_clean
+)
+
+# 4️⃣ View regression summary
+summary(log_model_factors)
+
+# 5️⃣ Add predicted values to the dataset
+merged_data_clean <- merged_data_clean %>%
+  mutate(predicted_log_Consumption = predict(log_model_factors))
+
+# 6️⃣ Optional: Plot consumption vs price by sector
+ggplot(merged_data_clean, aes(x = log_Price, y = log_Consumption, color = Sector)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Log Spot Price (DKK, shifted)",
+    y = "Log Consumption (kWh)",
+    title = "Log-Log Regression: Consumption vs Price by Sector"
+  )
+
+# 🔹 To revert to original data anytime:
+# merged_data <- merged_data_backup
+
+##Interpretation: Region and Sector dominate consumption patterns, while price plays a small but significant role.
+```
+```{r}
+#Model to show relationship between price and sector elasticity
+
+library(dplyr)
+library(ggplot2)
+
+# 1️⃣ Ensure we’re starting from the clean dataset
+# (with shifted prices, log-transformed consumption and price, and factors for Region/Sector)
+merged_data_interact <- merged_data_clean
+
+# 2️⃣ Run regression with interaction between log_Price and Sector
+log_model_interact <- lm(
+  log_Consumption ~ log_Price * Sector + Region,   # interaction included
+  data = merged_data_interact
+)
+
+# 3️⃣ View summary
+summary(log_model_interact)
+
+# 4️⃣ Add predicted values for plotting
+merged_data_interact <- merged_data_interact %>%
+  mutate(predicted_log_Consumption = predict(log_model_interact))
+
+# 5️⃣ Plot predicted relationship by Sector
+ggplot(merged_data_interact, aes(x = log_Price, y = log_Consumption, color = Sector)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Log Spot Price (DKK, shifted)",
+    y = "Log Consumption (kWh)",
+    title = "Log-Log Regression with Price x Sector Interaction"
+  )
 ```
 

@@ -228,3 +228,56 @@ ggplot(merged_data_interact, aes(x = log_Price, y = log_Consumption, color = Sec
   )
 ```
 
+```{r}
+#Trying removing negative and zeros to get clearer regression
+
+library(dplyr)
+library(ggplot2)
+
+# 1️⃣ Start from the clean dataset with shifted prices and log-transformed columns
+merged_data_positive <- merged_data_clean
+
+# 2️⃣ Remove rows where consumption or price is negative
+merged_data_positive <- merged_data_positive %>%
+  filter(Consumption_kWh > 0, Spot_Price_DKK > 0)
+
+# 3️⃣ Run regression with interaction again
+log_model_positive <- lm(
+  log_Consumption ~ log_Price * Sector + Region,
+  data = merged_data_positive
+)
+
+# 4️⃣ View summary
+summary(log_model_positive)
+
+# 5️⃣ Optional: Plot the cleaned relationship
+ggplot(merged_data_positive, aes(x = log_Price, y = log_Consumption, color = Sector)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Log Spot Price (DKK, shifted)",
+    y = "Log Consumption (kWh)",
+    title = "Log-Log Regression (Negative Prices/Consumption Removed)"
+  )
+
+# 🔹 Backup reminder: original data is still in merged_data_backup
+
+
+##Plot of relationship
+
+library(ggplot2)
+
+# Plot log-consumption vs log-price by sector
+ggplot(merged_data_positive, aes(x = log_Price, y = log_Consumption, color = Sector)) +
+  geom_point(alpha = 0.3, size = 0.8) +   # semi-transparent points to show density
+  geom_smooth(method = "lm", se = FALSE, size = 1.2) +  # regression line for each sector
+  labs(
+    title = "Log-Log Regression of Energy Consumption vs Spot Price by Sector",
+    x = "Log Spot Price (DKK, shifted)",
+    y = "Log Consumption (kWh)",
+    color = "Sector"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+```
+

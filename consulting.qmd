@@ -14,11 +14,45 @@ consumption_data <- read_excel("data/2021-2025_consumption_data.xlsx")
 
 price_data <- read_excel("data/2021-2025_price_data.xlsx")
 
+#Renaming columns
+library(dplyr)
+
+consumption_data <- consumption_data %>%
+  rename(Hour_DK = `Time(DK)`)
+consumption_data <- consumption_data %>%
+  rename(Consumption_kWh = `Consumption(kWh)`)
+price_data <- price_data %>%
+  rename(Spot_Price_DKK = `Spot Price (DKK)`)
+price_data <- price_data %>%
+  rename(Hour_DK = `Hour (DK)`)
+
+class(consumption_data$Hour_DK)
+
+#Adjusting time zone data
+consumption_data$time <- as.POSIXct(consumption_data$Hour_DK,
+                                    format = "%Y-%m-%d %H:%M:%S",
+                                    tz = "Europe/Copenhagen")
+
+price_data$time <- as.POSIXct(price_data$Hour_DK,
+                              format = "%Y-%m-%d %H:%M:%S",
+                              tz = "Europe/Copenhagen")
+
+#Checks
+class(consumption_data$time)
+attr(consumption_data$time, "tzone")
 ```
 
 ```{r}
 #Merging data sets
 
+library(dplyr)
 
+merged_data <- left_join(consumption_data,
+                         price_data,
+                         by = c("time", "Region"))
+#Deteling unnecessary hour columns
+
+merged_data <- merged_data %>%
+  select(-Hour_DK.x, -Hour_DK.y)
 ```
 

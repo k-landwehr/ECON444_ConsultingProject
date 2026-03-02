@@ -10,9 +10,15 @@ format: html
 install.packages("readxl")
 
 library(readxl)
-consum_data <- read_excel("data/ConsumptionConsumerCategoryHour.xlsx")
+consumption_data <- read_excel("data/2021-2025_consumption_data.xlsx")
 
-price_da_data <- read_excel("data/ActualDayAheadPrices.xlsx")
+price_data <- read_excel("data/2021-2025_price_data.xlsx")
+
+```
+
+```{r}
+#Merging data sets
+
 
 ```
 

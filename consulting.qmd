@@ -88,135 +88,100 @@ ggplot(merged_data, aes(x = Spot_Price_DKK, y = Consumption_kWh)) +
 ```
 
 ```{r}
-#Divide consumption by 1000
+#Transform the data
 
 merged_data <- merged_data %>%
-  mutate(Consumption_MWh = Consumption_kWh / 1000)
-model_MWh <- lm(Consumption_MWh ~ Spot_Price_DKK,
-                data = merged_data)
-
-summary(model_MWh)
-
-library(ggplot2)
-
-ggplot(merged_data, aes(x = Spot_Price_DKK, y = Consumption_MWh)) +
-  geom_point(alpha = 0.3, color = "steelblue") +
-  geom_smooth(method = "lm", se = TRUE, color = "red") +
-  labs(
-    title = "Electricity Consumption vs Spot Price",
-    x = "Spot Price (DKK)",
-    y = "Consumption (MWh)"
-  ) +
-  theme_minimal()
+  filter(Spot_Price_DKK > 0, Consumption_kWh > 0) %>%
+  mutate(
+    log_cons = log(Consumption_kWh),
+    log_price = log(Spot_Price_DKK)
+  )
 
 ```
 
 ```{r}
-#Divide graph by sector
+#Control for time
+merged_data <- merged_data %>%
+  mutate(
+    hour = as.numeric(format(Time, "%H")),
+    weekday = weekdays(Time)
+  )
 
-library(ggplot2)
-
-ggplot(merged_data,
-       aes(x = Spot_Price_DKK,
-           y = Consumption_MWh)) +
-  geom_point(alpha = 0.2, color = "steelblue") +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  facet_wrap(~ Sector) +
-  labs(
-    title = "Hourly Consumption vs Price by Sector",
-    x = "Spot Price (DKK)",
-    y = "Consumption (MWh)"
-  ) +
-  theme_minimal()
+merged_data <- merged_data %>%
+  mutate(month = format(Time, "%m"))
 ```
 
 ```{r}
-#Transparency and smaller points to reduce overplotting
-ggplot(merged_data,
-       aes(x = Spot_Price_DKK,
-           y = Consumption_MWh,
-           color = Sector)) +
-  geom_point(alpha = 0.05, size = 0.4) +
-  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-```
-
-```{r}
-# Checking for percentage of negatives
-
-mean(merged_data$Spot_Price_DKK < 0, na.rm = TRUE) * 100
-
-merged_data %>%
-  group_by(Sector) %>%
-  summarise(
-    negative_count = sum(Spot_Price_DKK < 0, na.rm = TRUE),
-    total_obs = n(),
-    share_negative = mean(Spot_Price_DKK < 0, na.rm = TRUE)
+#Removing some outliers for better clarity
+merged_data <- merged_data %>%
+  filter(
+    log_cons < quantile(log_cons, 0.995),
+    log_cons > quantile(log_cons, 0.005)
   )
 ```
 
 ```{r}
-# Test log-log model with negative values removed
+#Better model after data changes and with other factors added
+model_final <- lm(log_cons ~ log_price +
+                    factor(hour) +
+                    factor(weekday) +
+                    factor(month) +
+                    factor(Region) +
+                    factor(Sector),
+                  data = merged_data)
 
-filtered_data <- merged_data %>%
-  filter(Spot_Price_DKK > 0)
-
-ggplot(filtered_data,
-       aes(x = Spot_Price_DKK,
-           y = Consumption_MWh,
-           color = Sector)) +
-  geom_point(alpha = 0.05, size = 0.4) +
-  geom_smooth(method = "lm", se = FALSE) +
-  scale_x_log10() +
-  scale_y_log10() +
-  labs(
-    title = "Hourly Consumption vs Price (Log-Log, negatives removed)",
-    x = "Spot Price (log scale)",
-    y = "Consumption (log scale)"
-  ) +
-  theme_minimal()
+summary(model_final)
 ```
 
 ```{r}
-#Aggregate by hour for visualization
+#Adding interaction- "who responds to price"
+model_interaction <- lm(log_cons ~ log_price * factor(Sector) +
+                         factor(hour) +
+                         factor(weekday) +
+                         factor(month) +
+                         factor(Region),
+                       data = merged_data)
 
-library(dplyr)
-library(lubridate)
+summary(model_interaction)
+```
 
-hourly_summary <- merged_data %>%
-  mutate(hour = hour(Time)) %>%
-  group_by(Sector, hour) %>%
-  summarise(
-    avg_consumption = mean(Consumption_MWh, na.rm = TRUE),
-    avg_price = mean(Spot_Price_DKK, na.rm = TRUE),
-    .groups = "drop"
-  )
+```{r}
+#Visualization 
+sample_data <- merged_data %>% sample_n(5000)
 
-#Plot with regression fitted on raw data
+ggplot(sample_data, aes(x = log_price, y = log_cons)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(x = "Log Price", y = "Log Consumption",
+       title = "Log-Log Relationship (Sampled Data)")
+```
 
-library(ggplot2)
+```{r}
+#Extracting key coefficients for price elasticity
 
-ggplot() +
-  # Regression line from raw hourly data
-  geom_smooth(
-    data = merged_data,                          # raw hourly data
-    aes(x = Spot_Price_DKK, y = Consumption_MWh, color = Sector),
-    method = "lm",
-    se = FALSE,
-    linewidth = 1
-  ) +
-  # Aggregated hourly points for visualization
-  geom_point(
-    data = hourly_summary,
-    aes(x = avg_price, y = avg_consumption, color = Sector),
-    size = 3
-  ) +
-  labs(
-    title = "Hourly Consumption vs Price with Aggregated Points",
-    x = "Spot Price (DKK)",
-    y = "Consumption (MWh)"
-  ) +
-  theme_minimal()
+rownames(coef(summary(model_interaction)))
+
+coef(summary(model_interaction))["log_price", ]                  # baseline sector
+coef(summary(model_interaction))["log_price:factor(Sector)Business", ]
+coef(summary(model_interaction))["log_price:factor(Sector)Public", ]
+```
+
+```{r}
+coefs <- coef(summary(model_interaction))
+
+# Baseline (Business)
+baseline_elasticity <- coefs["log_price", "Estimate"]
+
+# Private sector
+private_elasticity <- baseline_elasticity + 
+                      coefs["log_price:factor(Sector)Private", "Estimate"]
+
+# Public sector
+public_elasticity <- baseline_elasticity + 
+                     coefs["log_price:factor(Sector)Public", "Estimate"]
+
+baseline_elasticity
+private_elasticity
+public_elasticity
 ```
 

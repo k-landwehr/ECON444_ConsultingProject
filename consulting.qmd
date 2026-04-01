@@ -159,14 +159,6 @@ ggplot(sample_data, aes(x = log_price, y = log_cons)) +
 ```{r}
 #Extracting key coefficients for price elasticity
 
-rownames(coef(summary(model_interaction)))
-
-coef(summary(model_interaction))["log_price", ]                  # baseline sector
-coef(summary(model_interaction))["log_price:factor(Sector)Business", ]
-coef(summary(model_interaction))["log_price:factor(Sector)Public", ]
-```
-
-```{r}
 coefs <- coef(summary(model_interaction))
 
 # Baseline (Business)

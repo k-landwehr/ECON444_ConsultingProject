@@ -175,5 +175,8 @@ public_elasticity <- baseline_elasticity +
 baseline_elasticity
 private_elasticity
 public_elasticity
+
+
+summary(model_interaction)
 ```
 

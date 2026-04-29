@@ -180,3 +180,77 @@ public_elasticity
 summary(model_interaction)
 ```
 
+```{r}
+# Q-Q plot for final model
+plot(model_final, which = 2)
+
+# Extract residuals from final model
+residuals_final <- residuals(model_final)
+
+# Create Q-Q plot
+ggplot(data.frame(residuals_final), aes(sample = residuals_final)) +
+  stat_qq(alpha = 0.5) +
+  stat_qq_line(color = "blue", linewidth = 1) +
+  labs(
+    title = "Normal Q-Q Plot of Model Residuals",
+    subtitle = "Points deviating from the line indicate departures from normality",
+    x = "Theoretical Quantiles (Normal)",
+    y = "Observed Residual Quantiles"
+  ) +
+  theme_minimal(base_family = "Arial") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+```{r}
+# Create elasticity results table
+elasticity_data <- data.frame(
+  Sector = c("Business", "Private", "Public"),
+  Elasticity = c(
+    baseline_elasticity,
+    private_elasticity,
+    public_elasticity
+  )
+)
+
+ggplot(elasticity_data, aes(x = Sector, y = Elasticity, fill = Sector)) +
+  geom_col(width = 0.65) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_text(aes(label = round(Elasticity, 4)),
+            vjust = ifelse(elasticity_data$Elasticity >= 0, -0.5, 1.3),
+            size = 3) +
+  scale_fill_manual(values = c(
+    "Business" = "#AEC6CF",
+    "Private"  = "#B2E2B2",
+    "Public"   = "#F4B6C2"
+  )) +
+  labs(
+    title = "Estimated Electricity Price Elasticity by Sector",
+    x = "Sector",
+    y = "Price Elasticity"
+  ) +
+  theme_minimal(base_family = "Arial") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+    plot.title.position = "plot",
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+
+    # ✅ Clean white background (no boxes)
+    panel.background = element_blank(),
+    plot.background = element_blank(),
+
+    # ✅ Light grid lines only
+    panel.grid.major.y = element_line(color = "gray85", size = 0.5),
+    panel.grid.major.x = element_line(color = "gray90", size = 0.3),
+    panel.grid.minor = element_blank()
+  )
+```
+

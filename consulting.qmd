@@ -80,11 +80,29 @@ plot(model, which = 2)
 
 library(ggplot2)
 
-ggplot(merged_data, aes(x = Spot_Price_DKK, y = Consumption_kWh)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", col = "blue") +
-  labs(x = "Spot Price (DKK)", y = "Consumption (kWh)",
-       title = "Consumption vs Spot Price")
+# Extract residuals from initial model
+residuals_initial <- residuals(model)
+
+# Create polished Q-Q plot
+ggplot(data.frame(residuals_initial), aes(sample = residuals_initial)) +
+  stat_qq(alpha = 0.5) +
+  stat_qq_line(color = "blue", linewidth = 1) +
+  labs(
+    title = "Normal Q-Q Plot of Baseline Model Residuals",
+    subtitle = "Large deviations from the line indicate substantial non-normality",
+    x = "Theoretical Quantiles (Normal)",
+    y = "Observed Residual Quantiles"
+  ) +
+  theme_minimal(base_family = "Arial") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_line(color = "gray90"),
+    panel.grid.major.y = element_line(color = "gray90")
+  )
 ```
 
 ```{r}
